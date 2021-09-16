@@ -56,44 +56,44 @@ function AuthProvider({ children }: AuthProviderData) {
         `&force_verify=${FORCE_VERIFY}` +
         `&state=${STATE}`;
 
-      // assemble authUrl with twitchEndpoint authorization, client_id, 
       const authResponse = await startAsync({ authUrl });
       if (authResponse.type === 'success' && authResponse.params.error !== "access_denied") {
-          if(authResponse.params.state !== STATE) {
-            throw new Error('Invalid state value');
-          }
+        if (authResponse.params.state !== STATE) {
+          throw new Error('Invalid state value');
+        }
 
-          api.defaults.headers.authorization = `Bearer ${authResponse.params.access_token}`;
+        api.defaults.headers.authorization = `Bearer ${authResponse.params.access_token}`;
 
-          const userResponse = await api.get('/users');
+        const userResponse = await api.get('/users');
 
-          setUser({
-            id: userResponse.data.data[0].id,
-            display_name: userResponse.data.data[0].display_name,
-            email: userResponse.data.data[0].email,
-            profile_image_url: userResponse.data.data[0].profile_image_url,
-          });
-          setUserToken(authResponse.params.acccess_token);
-    } 
-  }catch (error) {
-    throw new Error();
-  } finally {
-    setIsLoggingIn(false);
+        setUser({
+          id: userResponse.data.data[0].id,
+          display_name: userResponse.data.data[0].display_name,
+          email: userResponse.data.data[0].email,
+          profile_image_url: userResponse.data.data[0].profile_image_url,
+        });
+        setUserToken(authResponse.params.access_token);
+      }
+    } catch (error) {
+      throw new Error();
+    } finally {
+      setIsLoggingIn(false);
+    }
   }
 
   async function signOut() {
     try {
-      // set isLoggingOut to true
+      setIsLoggingOut(true);
 
-      // call revokeAsync with access_token, client_id and twitchEndpoint revocation
+      await revokeAsync({ token: userToken, clientId: CLIENT_ID }, { revocationEndpoint: twitchEndpoints.revocation });
     } catch (error) {
     } finally {
-      // set user state to an empty User object
-      // set userToken state to an empty string
+     setUser({} as User);
+     setUserToken('') ;
 
-      // remove "access_token" from request's authorization header
+     delete api.defaults.headers.authorization;
 
-      // set isLoggingOut to false
+     setIsLoggingOut(false);
     }
   }
 
@@ -105,13 +105,12 @@ function AuthProvider({ children }: AuthProviderData) {
     <AuthContext.Provider value={{ user, isLoggingOut, isLoggingIn, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
-  )
-}
+  )}
 
-function useAuth() {
-  const context = useContext(AuthContext);
+  function useAuth() {
+    const context = useContext(AuthContext);
 
-  return context;
-}
+    return context;
+  }
+  export { AuthProvider, useAuth };
 
-export { AuthProvider, useAuth };
